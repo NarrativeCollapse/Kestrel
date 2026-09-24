@@ -52,8 +52,6 @@ jobs:
       upstream-public-key: atomic-desktop.pub
       platforms: ${{ needs.set-env.outputs.PLATFORMS }}
       skip-maximize-build-space: true
-      # create-release packages the SBOMs, so they must be generated
-      generate-sbom: true
       image-path: ${{ needs.set-env.outputs.IMAGE_PATH }}
       REGISTRY: ${{ needs.set-env.outputs.REGISTRY }}
       REGISTRY_USER: ${{ needs.set-env.outputs.REGISTRY_USER }}
@@ -132,15 +130,5 @@ jobs:
     permissions:
       packages: write
 
-  create-release:
-    name: Create Release
-    needs: [set-env, build-image, test-image, promote-image]
-    if: ${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
-    uses: AlmaLinux/atomic-ci/.github/workflows/create-release.yml@v11
-    with:
-      image-name: "${{ needs.set-env.outputs.IMAGE_NAME }}"
-      version: ${{ needs.build-image.outputs.version }}
-      pretty-version: ${{ needs.build-image.outputs.redhat-version-id }}
-      latest-image-ref: "${{ needs.build-image.outputs.image-ref }}:${{ needs.set-env.outputs.LATEST_TAG }}"
-    permissions:
-      contents: write
+  # No create-release job: atomic-ci's release step needs SBOMs, and generating one for
+  # this image fills the free GitHub runner's disk. Images and ISOs don't depend on it.

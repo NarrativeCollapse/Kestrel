@@ -13,7 +13,7 @@ An immutable (bootc) daily-driver desktop built on **AlmaLinux Atomic Desktop (K
 - **Terminal bling** (after [Bazzite](https://github.com/ublue-os/bazzite)): Homebrew, starship prompt, Nerd Font icons, `eza`, `ugrep`, `atuin` history search (Ctrl+R), `zoxide`, Kestrel fastfetch banner — in bash, zsh and fish
 - **Xbox controllers** over USB (`xpad`) and Bluetooth (`hid-microsoft`), with BlueZ tuned for reliable re-pairing
 - **Podman and Distrobox** out of the box, for containers and other distros' packages (`distrobox create -i ubuntu:24.04`)
-- **`kestrel` helper**: `kestrel status | update | rollback | bling on/off | controllers | secureboot`
+- **`kestrel` helper**: `kestrel status | update | rollback | bling on/off | controllers | audio | secureboot`
 - **Background OS updates**: new images download daily and apply on your next reboot (never an automatic reboot)
 - **Atomic updates and rollback** via `bootc`
 
@@ -28,6 +28,7 @@ An immutable (bootc) daily-driver desktop built on **AlmaLinux Atomic Desktop (K
 | Homebrew | From [ublue-os/brew](https://github.com/ublue-os/brew). Unpacked to `/var/home/linuxbrew` on first boot and owned by the **first user account (UID 1000)**; other accounts can use but not install. Brew updates every 6h and upgrades every 8h in the background. Brew's `bin` comes *after* the system's in `PATH`, so it never overrides system tools. |
 | Terminal bling | `kestrel-brew-bling.service` installs the tools in `/usr/share/kestrel/Brewfile` on first boot (needs network; retries each boot until it succeeds). Starship is on for everyone in bash; opt out with `touch ~/.config/kestrel/no-bling`. Atuin takes over Ctrl+R only, not the Up arrow. |
 | Xbox controllers | Bluetooth pads use the kernel's `hid-microsoft`. EL10's kernel has no `xpad` (wired pads), so Kestrel builds it from Linux 6.12's source (`kmods/`) and signs it with the Kestrel driver key; with Secure Boot on, run `kestrel secureboot` once (see **Secure Boot** below). The **Xbox Wireless Adapter** (USB dongle) isn't supported (needs the `xone` driver + Microsoft firmware). `kestrel controllers` shows what's detected. |
+| Laptop audio | Recent Intel laptops (incl. Alder Lake-N) play sound through the SOF DSP, which needs `alsa-sof-firmware` + ALSA UCM profiles (`25-audio.sh`); generic AlmaLinux Atomic lacks them and shows only "Dummy Output". `kestrel audio` checks the driver, firmware and outputs. |
 | Video decode | Intel's full VA-API driver (`intel-media-driver`, "iHD") comes from **RPM Fusion** (free + nonfree), enabled in `10-base.sh`. |
 | Boot test | After each image build, CI boots the image in a VM and waits for the login screen (**Boot test** workflow; serial log is kept as an artifact). The image is already published by then, so if it fails, don't reboot into the staged update. |
 | Optional packages | Nice-to-haves go through `install_optional` (`files/scripts/lib.sh`). If EPEL drops one, the build logs a warning and carries on. |
@@ -40,6 +41,7 @@ kmods/                        out-of-tree drivers (xpad), built + signed by buil
 files/scripts/
   10-base.sh                  refresh repos, upgrade to newest EPEL Plasma
   20-intel-graphics.sh        Mesa, Vulkan, VA-API, firmware
+  25-audio.sh                 SOF firmware + UCM for laptop speakers/mics
   30-gaming.sh                tuned-ppd, zram, GameMode, enables services
   40-desktop.sh               KDE apps + CLI tools
   50-branding.sh              name in os-release / About This System  ← rename here

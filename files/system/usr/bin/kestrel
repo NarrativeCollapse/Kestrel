@@ -23,6 +23,7 @@ ${bold}kestrel${reset} — Kestrel helper
   ${bold}rollback${reset}         boot the previous image on next reboot
   ${bold}bling on|off${reset}     terminal prompt/aliases for your account (new terminals)
   ${bold}controllers${reset}      check Xbox/game controller support and list connected pads
+  ${bold}audio${reset}            check sound hardware, SOF firmware and PipeWire outputs
   ${bold}secureboot${reset}       enroll Kestrel's driver key so xpad loads with Secure Boot on
   ${bold}help${reset}             this text
 EOF
@@ -115,6 +116,42 @@ cmd_controllers() {
     ((found)) || warn "none detected. Plug in over USB, or pair in System Settings → Bluetooth."
 }
 
+cmd_audio() {
+    title "Sound hardware"
+    local line found=0
+    if command -v lspci >/dev/null; then
+        while IFS= read -r line; do
+            printf '  %s\n' "${line}"
+            found=1
+        done < <(lspci -k | grep -EA3 -i 'audio device|multimedia audio' | grep -Ei 'audio|driver in use' || true)
+    fi
+    ((found)) || warn "no PCI audio device listed"
+    echo
+    title "Firmware"
+    if compgen -G '/usr/lib/firmware/intel/sof*' >/dev/null; then
+        ok "Intel SOF firmware present (alsa-sof-firmware)"
+    else
+        bad "Intel SOF firmware missing"
+    fi
+    echo
+    title "Sound cards (ALSA)"
+    if [[ -s /proc/asound/cards ]] && ! grep -q 'no soundcards' /proc/asound/cards; then
+        sed 's/^/  /' /proc/asound/cards
+    else
+        bad "no sound cards: the driver didn't start (see: sudo journalctl -k -b | grep -iE 'sof|snd')"
+    fi
+    echo
+    title "Outputs (PipeWire)"
+    if command -v wpctl >/dev/null; then
+        wpctl status 2>/dev/null | sed -n '/Sinks:/,/Sources:/p' | sed '$d' | sed 's/^/  /'
+        if wpctl status 2>/dev/null | grep -q 'Dummy Output'; then
+            warn "only \"Dummy Output\": PipeWire found no working sound card"
+        fi
+    else
+        warn "wpctl not found"
+    fi
+}
+
 cmd_secureboot() {
     local pem=/usr/share/kestrel/secureboot/kestrel-kmod.pem der state answer
     title "Secure Boot"
@@ -153,6 +190,7 @@ case "${1:-help}" in
     rollback)     cmd_rollback ;;
     bling)        shift; cmd_bling "$@" ;;
     controllers)  cmd_controllers ;;
+    audio)        cmd_audio ;;
     secureboot)   cmd_secureboot ;;
     help|-h|--help) cmd_help ;;
     *) echo "Unknown command: $1"; echo; cmd_help; exit 2 ;;

@@ -121,6 +121,9 @@ jobs:
           test -x /usr/libexec/kestrel-brew-run
           test -f /usr/lib/systemd/system/brew-update.service.d/10-kestrel-owner.conf
           test -f /usr/share/kestrel/logo.txt
+          rpm -q alsa-sof-firmware
+          ls -d /usr/lib/firmware/intel/sof*
+          find /usr/lib/firmware/intel -path '*sof*' -iname '*adl-n*' | head -n 5
           rpm -q podman
           podman --version
           distrobox version

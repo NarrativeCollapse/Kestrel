@@ -18,5 +18,6 @@ install_optional \
     libva-utils \
     vulkan-tools \
     mesa-demos \
+    igt-gpu-tools \
     intel-gpu-tools \
     intel-gpu-firmware

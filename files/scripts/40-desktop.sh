@@ -20,6 +20,7 @@ install_optional \
     fastfetch \
     btop \
     htop \
+    7zip \
     p7zip \
     unzip
 

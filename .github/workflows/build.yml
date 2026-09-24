@@ -110,9 +110,7 @@ jobs:
           systemctl is-enabled kestrel-flatpak-update.timer
           systemctl is-enabled kestrel-flatpak-extras.timer
           systemctl is-enabled system-flatpak-setup.timer
-          test -x /usr/bin/claude-desktop
-          rpm -q qemu-kvm-core edk2-ovmf virtiofsd
-          test -e /usr/bin/qemu-system-x86_64
+          if [ -e /usr/bin/claude-desktop ]; then echo "Claude Desktop should not be in the image"; exit 1; fi
           test -f /usr/share/homebrew.tar.zst
           systemctl is-enabled brew-setup.service brew-update.timer brew-upgrade.timer kestrel-brew-bling.service
           bash -n /etc/profile.d/kestrel-bling.sh

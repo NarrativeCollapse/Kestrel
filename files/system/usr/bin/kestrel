@@ -23,7 +23,6 @@ ${bold}kestrel${reset} — Kestrel helper
   ${bold}rollback${reset}         boot the previous image on next reboot
   ${bold}bling on|off${reset}     terminal prompt/aliases for your account (new terminals)
   ${bold}controllers${reset}      check Xbox/game controller support and list connected pads
-  ${bold}cowork${reset}           check what Claude Desktop's Cowork needs (KVM, QEMU, vsock)
   ${bold}secureboot${reset}       enroll Kestrel's driver key so xpad loads with Secure Boot on
   ${bold}help${reset}             this text
 EOF
@@ -116,31 +115,6 @@ cmd_controllers() {
     ((found)) || warn "none detected. Plug in over USB, or pair in System Settings → Bluetooth."
 }
 
-cmd_cowork() {
-    title "Claude Desktop Cowork requirements"
-    if grep -Eq '(vmx|svm)' /proc/cpuinfo; then
-        ok "CPU virtualization (VT-x/AMD-V) enabled"
-    else
-        bad "CPU virtualization is off — enable VT-x in your firmware (BIOS/UEFI) settings"
-    fi
-    local dev
-    for dev in /dev/kvm /dev/vhost-vsock; do
-        if [[ ! -e "${dev}" ]]; then
-            bad "${dev} missing"
-        elif [[ -r "${dev}" && -w "${dev}" ]]; then
-            ok "${dev} accessible"
-        else
-            bad "${dev} not accessible — run: sudo usermod -aG kvm ${USER}  (then log out and in)"
-        fi
-    done
-    local bin
-    for bin in /usr/bin/qemu-system-x86_64 /usr/libexec/virtiofsd; do
-        [[ -x "${bin}" ]] && ok "${bin}" || bad "${bin} missing"
-    done
-    if [[ -e /usr/share/OVMF/OVMF_CODE.fd ]]; then ok "UEFI firmware (OVMF)"; else bad "OVMF firmware missing"; fi
-    command -v claude-desktop >/dev/null && ok "claude-desktop installed" || bad "claude-desktop missing"
-}
-
 cmd_secureboot() {
     local pem=/usr/share/kestrel/secureboot/kestrel-kmod.pem der state answer
     title "Secure Boot"
@@ -179,7 +153,6 @@ case "${1:-help}" in
     rollback)     cmd_rollback ;;
     bling)        shift; cmd_bling "$@" ;;
     controllers)  cmd_controllers ;;
-    cowork)       cmd_cowork ;;
     secureboot)   cmd_secureboot ;;
     help|-h|--help) cmd_help ;;
     *) echo "Unknown command: $1"; echo; cmd_help; exit 2 ;;

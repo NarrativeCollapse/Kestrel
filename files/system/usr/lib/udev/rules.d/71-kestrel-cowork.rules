@@ -1,4 +1,0 @@
-# Kestrel: let the logged-in user run Claude Desktop's Cowork VM without joining the kvm group.
-# "uaccess" grants access only to the user at the active local seat.
-KERNEL=="kvm", TAG+="uaccess"
-KERNEL=="vhost-vsock", TAG+="uaccess"

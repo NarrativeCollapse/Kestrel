@@ -22,10 +22,10 @@ mkdir -m 0700 "${GNUPGHOME}"
 # --- Verify: signing key -> InRelease -> Packages -> .deb ---
 curl -fsSL --retry 3 -o "${WORK}/key.asc" "${KEY_URL}"
 gpg --batch --import "${WORK}/key.asc"
-gpg --batch --with-colons --fingerprint | grep -q "^fpr:::::::::${KEY_FPR}:$"
+gpg --batch --with-colons --fingerprint | grep "^fpr:::::::::${KEY_FPR}:$" >/dev/null
 
 curl -fsSL --retry 3 -o "${WORK}/InRelease" "${REPO}/dists/stable/InRelease"
-gpg --batch --status-fd 1 --verify "${WORK}/InRelease" | grep -q "VALIDSIG ${KEY_FPR}"
+gpg --batch --status-fd 1 --verify "${WORK}/InRelease" | grep "VALIDSIG ${KEY_FPR}" >/dev/null
 gpg --batch --decrypt "${WORK}/InRelease" > "${WORK}/Release"
 
 PKGS_PATH="main/binary-${ARCH}/Packages"

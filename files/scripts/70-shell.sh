@@ -33,5 +33,5 @@ if [[ -f "${WORK}/nf/10-nerd-font-symbols.conf" ]]; then
     ln -sf /usr/share/fontconfig/conf.avail/10-nerd-font-symbols.conf /etc/fonts/conf.d/
 fi
 fc-cache -f /usr/share/fonts/nerd-fonts-symbols
-fc-list | grep -q 'Symbols Nerd Font'
+test -n "$(fc-list 'Symbols Nerd Font')"
 rm -rf "${WORK}"

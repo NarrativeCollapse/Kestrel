@@ -24,7 +24,7 @@ fi
 
 for ext in org.freedesktop.Platform.VulkanLayer.MangoHud org.freedesktop.Platform.VulkanLayer.gamescope; do
     ref="runtime/${ext}/${ARCH}/${BRANCH}"
-    if flatpak list --system --runtime --columns=ref | grep -qxF "${ext}/${ARCH}/${BRANCH}"; then
+    if flatpak list --system --runtime --columns=ref | grep -xF "${ext}/${ARCH}/${BRANCH}" >/dev/null; then
         echo "$ref already installed"
     else
         echo "Installing $ref"

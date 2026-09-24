@@ -9,7 +9,7 @@
 install_optional() {
     local pkg available=() missing=()
     for pkg in "$@"; do
-        if dnf -q repoquery --available --latest-limit=1 "$pkg" 2>/dev/null | grep -q .; then
+        if dnf -q repoquery --available --latest-limit=1 "$pkg" 2>/dev/null | grep . >/dev/null; then
             available+=("$pkg")
         else
             missing+=("$pkg")

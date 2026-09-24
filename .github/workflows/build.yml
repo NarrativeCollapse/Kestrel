@@ -104,7 +104,7 @@ jobs:
           test -f /usr/share/homebrew.tar.zst
           systemctl is-enabled brew-setup.service brew-update.timer brew-upgrade.timer kestrel-brew-bling.service
           bash -n /etc/profile.d/kestrel-bling.sh
-          fc-list | grep -q 'Symbols Nerd Font'
+          test -n "$(fc-list 'Symbols Nerd Font')"
           EOF
 
           podman run --rm \

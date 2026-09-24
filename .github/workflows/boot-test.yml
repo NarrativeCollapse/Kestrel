@@ -15,9 +15,11 @@ permissions:
   contents: read
   packages: read
 
+# Queue rather than cancel: a run triggered by a cancelled build still starts (its job is
+# skipped by the `if` below), and with cancel-in-progress it would cancel a real test.
 concurrency:
   group: boot-test
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   boot:

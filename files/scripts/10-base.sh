@@ -9,6 +9,12 @@ set -xeuo pipefail
 dnf install -y 'dnf-command(config-manager)' epel-release
 dnf config-manager --set-enabled crb
 
+# RPM Fusion (free + nonfree): Intel's full VA-API video driver and other packages
+# EL10/EPEL don't ship. Needs EPEL, enabled above.
+dnf install -y \
+    https://mirrors.rpmfusion.org/free/el/rpmfusion-free-release-10.noarch.rpm \
+    https://mirrors.rpmfusion.org/nonfree/el/rpmfusion-nonfree-release-10.noarch.rpm
+
 # Bring everything (Plasma, Frameworks, Mesa, firmware) up to the newest available.
 # --nobest: when AppStream and EPEL are briefly out of step (e.g. a gpsd update that
 # EPEL's plasma5support isn't rebuilt against yet), hold those packages back instead

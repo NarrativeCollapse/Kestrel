@@ -12,9 +12,15 @@ dnf install -y \
     vulkan-loader \
     linux-firmware
 
+# Hardware video decode (VA-API, "iHD") for Broadwell and newer, incl. Alder Lake-N.
+# RPM Fusion's intel-media-driver has every codec; the free libva-intel-media-driver is the
+# fallback. They conflict, so only one is installed.
+install_optional intel-media-driver
+if ! rpm -q intel-media-driver >/dev/null 2>&1; then
+    install_optional libva-intel-media-driver
+fi
+
 install_optional \
-    intel-media-driver \
-    libva-intel-media-driver \
     libva-utils \
     vulkan-tools \
     mesa-demos \

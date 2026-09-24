@@ -1,0 +1,13 @@
+[Unit]
+Description=Download and stage the latest Kestrel image (applies on next reboot)
+Documentation=man:bootc-upgrade(8)
+Wants=network-online.target
+After=network-online.target
+ConditionPathExists=/run/ostree-booted
+
+[Service]
+Type=oneshot
+# Stage only: no --apply, so the machine never reboots on its own.
+ExecStart=/usr/bin/bootc upgrade
+Nice=10
+IOSchedulingClass=idle

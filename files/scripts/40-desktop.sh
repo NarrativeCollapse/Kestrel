@@ -17,12 +17,28 @@ install_optional \
     kde-gtk-config \
     ffmpegthumbs \
     kio-extras \
-    distrobox \
     fastfetch \
     btop \
     htop \
     p7zip \
     unzip
+
+# Containers: podman and distrobox are required, not optional.
+dnf install -y podman
+if dnf -q repoquery --available --latest-limit=1 distrobox 2>/dev/null | grep . >/dev/null; then
+    dnf install -y distrobox
+else
+    # Not packaged for EL10/EPEL 10: install the upstream release, pinned to its exact commit.
+    DISTROBOX_VERSION="1.8.2.5"
+    DISTROBOX_COMMIT="40c3cd724faa434aeb0a23e28776665b92de68bd"
+    dnf install -y git-core
+    DB_SRC="$(mktemp -d)"
+    git clone --quiet --depth 1 --branch "${DISTROBOX_VERSION}" https://github.com/89luca89/distrobox "${DB_SRC}"
+    test "$(git -C "${DB_SRC}" rev-parse HEAD)" = "${DISTROBOX_COMMIT}"
+    (cd "${DB_SRC}" && ./install --prefix /usr)
+    rm -rf "${DB_SRC}"
+fi
+distrobox version
 
 # Browser: LibreWolf (Flatpak) replaces Firefox. Drop the Firefox RPM if the base shipped one.
 if rpm -q firefox >/dev/null 2>&1; then

@@ -11,6 +11,7 @@ An immutable (bootc) daily-driver desktop built on **AlmaLinux Atomic Desktop (K
 - **Claude Desktop** (Chat, Cowork, Code) from Anthropic's official Linux build, with QEMU/KVM for Cowork
 - **Terminal bling** (after [Bazzite](https://github.com/ublue-os/bazzite)): Homebrew, starship prompt, Nerd Font icons, `eza`, `ugrep`, `atuin` history search (Ctrl+R), `zoxide`, Kestrel fastfetch banner — in bash, zsh and fish
 - **Xbox controllers** over USB (`xpad`) and Bluetooth (`hid-microsoft`), with BlueZ tuned for reliable re-pairing
+- **Podman and Distrobox** out of the box, for containers and other distros' packages (`distrobox create -i ubuntu:24.04`)
 - **`kestrel` helper**: `kestrel status | update | rollback | bling on/off | controllers | cowork`
 - **Background OS updates**: new images download daily and apply on your next reboot (never an automatic reboot)
 - **Atomic updates and rollback** via `bootc`

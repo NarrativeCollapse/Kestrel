@@ -7,6 +7,8 @@ ConditionPathExists=!/home/linuxbrew/.linuxbrew/.kestrel-bling-installed
 
 [Service]
 Type=oneshot
+# Skip (not fail) until a user account owns Homebrew, e.g. before the first user exists.
+ExecCondition=/usr/bin/bash -c 'getent passwd "$$(stat -c %%u /home/linuxbrew/.linuxbrew)" >/dev/null'
 Environment=HOMEBREW_NO_INSTALL_CLEANUP=1
 # Runs brew as the user who owns /home/linuxbrew (see kestrel-brew-owner).
 ExecStart=/usr/libexec/kestrel-brew-run bundle --file=/usr/share/kestrel/Brewfile

@@ -62,18 +62,23 @@ jobs:
       - name: Build VM disk
         run: |
           mkdir -p output
+          # Throwaway SSH key for a test user, so the test can ask systemd how boot went.
+          ssh-keygen -q -t ed25519 -N '' -f boot-test-key
+          cp .github/boot-test.toml config.toml
+          printf '\n[[customizations.user]]\nname = "kestreltest"\nkey = "%s"\ngroups = ["wheel"]\n' \
+            "$(cat boot-test-key.pub)" >> config.toml
           sudo podman run --rm --privileged \
             --security-opt label=type:unconfined_t \
             -v ./output:/output \
-            -v ./.github/boot-test.toml:/config.toml:ro \
+            -v ./config.toml:/config.toml:ro \
             -v /var/lib/containers/storage:/var/lib/containers/storage \
             quay.io/centos-bootc/bootc-image-builder:latest \
             --type qcow2 --rootfs xfs "${IMAGE}"
           sudo chown -R "$(id -u):$(id -g)" output
           ls -lh output/qcow2
 
-      - name: Boot and wait for the login screen
-        run: .github/boot-test.sh output/qcow2/disk.qcow2
+      - name: Boot, log in over SSH, check systemd
+        run: .github/boot-test.sh output/qcow2/disk.qcow2 boot-test-key
 
       - name: Upload serial console log
         if: always()

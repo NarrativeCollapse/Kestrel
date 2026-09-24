@@ -1,0 +1,83 @@
+---
+# Boots the published image in a VM after each successful "Build image" run on main,
+# so a build that installs fine but won't boot is caught before machines update to it.
+# The image is already published at this point; a failure here means: don't reboot into
+# the staged update, and fix the build.
+name: Boot test
+on:
+  workflow_run:
+    workflows: ["Build image"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: read
+
+concurrency:
+  group: boot-test
+  cancel-in-progress: true
+
+jobs:
+  boot:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v4
+
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          df -h /
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          ls -l /dev/kvm
+
+      - name: Install QEMU
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q qemu-system-x86 qemu-utils
+
+      - name: Pull image
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ACTOR: ${{ github.actor }}
+          REPO: ${{ github.repository }}
+        run: |
+          IMAGE="ghcr.io/${REPO,,}:latest"
+          echo "IMAGE=${IMAGE}" >> "$GITHUB_ENV"
+          echo "${TOKEN}" | sudo podman login ghcr.io -u "${ACTOR}" --password-stdin
+          sudo podman pull "${IMAGE}"
+
+      - name: Build VM disk
+        run: |
+          mkdir -p output
+          sudo podman run --rm --privileged \
+            --security-opt label=type:unconfined_t \
+            -v ./output:/output \
+            -v ./.github/boot-test.toml:/config.toml:ro \
+            -v /var/lib/containers/storage:/var/lib/containers/storage \
+            quay.io/centos-bootc/bootc-image-builder:latest \
+            --type qcow2 --rootfs xfs "${IMAGE}"
+          sudo chown -R "$(id -u):$(id -g)" output
+          ls -lh output/qcow2
+
+      - name: Boot and wait for the login screen
+        run: .github/boot-test.sh output/qcow2/disk.qcow2
+
+      - name: Upload serial console log
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v4
+        with:
+          name: boot-test-serial-log
+          path: serial.log
+          if-no-files-found: ignore
+          retention-days: 14

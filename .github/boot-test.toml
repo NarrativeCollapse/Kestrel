@@ -1,0 +1,4 @@
+# bootc-image-builder config for the CI boot test (qcow2 disk, not the installer ISO).
+# Serial console + systemd status lines so the test can watch the boot.
+[customizations.kernel]
+append = "console=ttyS0,115200n8 systemd.show_status=1"

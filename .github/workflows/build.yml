@@ -52,6 +52,8 @@ jobs:
       upstream-public-key: atomic-desktop.pub
       platforms: ${{ needs.set-env.outputs.PLATFORMS }}
       skip-maximize-build-space: true
+      # create-release packages the SBOMs, so they must be generated
+      generate-sbom: true
       image-path: ${{ needs.set-env.outputs.IMAGE_PATH }}
       REGISTRY: ${{ needs.set-env.outputs.REGISTRY }}
       REGISTRY_USER: ${{ needs.set-env.outputs.REGISTRY_USER }}

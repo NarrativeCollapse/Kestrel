@@ -6,14 +6,10 @@ ConditionPathIsSymbolicLink=/home/linuxbrew/.linuxbrew/bin/brew
 ConditionPathExists=!/home/linuxbrew/.linuxbrew/.kestrel-bling-installed
 
 [Service]
-# Same user as brew-setup/brew-upgrade (the first account, which owns /home/linuxbrew)
-User=1000
 Type=oneshot
-Environment=HOMEBREW_CELLAR=/home/linuxbrew/.linuxbrew/Cellar
-Environment=HOMEBREW_PREFIX=/home/linuxbrew/.linuxbrew
-Environment=HOMEBREW_REPOSITORY=/home/linuxbrew/.linuxbrew/Homebrew
 Environment=HOMEBREW_NO_INSTALL_CLEANUP=1
-ExecStart=/home/linuxbrew/.linuxbrew/bin/brew bundle --file=/usr/share/kestrel/Brewfile
+# Runs brew as the user who owns /home/linuxbrew (see kestrel-brew-owner).
+ExecStart=/usr/libexec/kestrel-brew-run bundle --file=/usr/share/kestrel/Brewfile
 ExecStartPost=/usr/bin/touch /home/linuxbrew/.linuxbrew/.kestrel-bling-installed
 TimeoutStartSec=45min
 

@@ -20,5 +20,8 @@ install_optional() {
     fi
     if ((${#missing[@]})); then
         echo "::warning::Optional packages not available, skipped: ${missing[*]}"
+        # Kept in the image so CI and `kestrel status` can list them.
+        mkdir -p /usr/share/kestrel
+        printf '%s\n' "${missing[@]}" >> /usr/share/kestrel/missing-optional-packages
     fi
 }

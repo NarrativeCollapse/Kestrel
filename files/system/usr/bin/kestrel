@@ -1,0 +1,152 @@
+#!/usr/bin/bash
+# kestrel: small helper for common Kestrel tasks. Run `kestrel help`.
+
+set -uo pipefail
+
+bold=$'\e[1m' dim=$'\e[2m' red=$'\e[31m' green=$'\e[32m' yellow=$'\e[33m' reset=$'\e[0m'
+[[ -t 1 ]] || { bold='' dim='' red='' green='' yellow='' reset=''; }
+
+ok()   { printf '  %s✔%s %s\n' "${green}" "${reset}" "$*"; }
+warn() { printf '  %s!%s %s\n' "${yellow}" "${reset}" "$*"; }
+bad()  { printf '  %s✘%s %s\n' "${red}" "${reset}" "$*"; }
+title() { printf '%s%s%s\n' "${bold}" "$*" "${reset}"; }
+
+bling_flag="${XDG_CONFIG_HOME:-$HOME/.config}/kestrel/no-bling"
+
+cmd_help() {
+    cat <<EOF
+${bold}kestrel${reset} — Kestrel helper
+
+  ${bold}status${reset}           OS image, staged update, background services
+  ${bold}update${reset}           download the latest image now (applies on next reboot)
+  ${bold}update --reboot${reset}  download it and reboot into it
+  ${bold}rollback${reset}         boot the previous image on next reboot
+  ${bold}bling on|off${reset}     terminal prompt/aliases for your account (new terminals)
+  ${bold}controllers${reset}      check Xbox/game controller support and list connected pads
+  ${bold}cowork${reset}           check what Claude Desktop's Cowork needs (KVM, QEMU, vsock)
+  ${bold}help${reset}             this text
+EOF
+}
+
+cmd_status() {
+    title "OS image"
+    if command -v bootc >/dev/null; then
+        sudo bootc status 2>/dev/null | sed 's/^/  /' || warn "run with sudo rights to see bootc status"
+    else
+        warn "bootc not found"
+    fi
+    echo
+    title "Background services"
+    local unit
+    for unit in kestrel-os-update.timer kestrel-flatpak-update.timer kestrel-flatpak-extras.timer \
+                brew-update.timer brew-upgrade.timer; do
+        if systemctl is-enabled --quiet "${unit}" 2>/dev/null; then
+            ok "${unit} ${dim}(next: $(systemctl show -P NextElapseUSecRealtime "${unit}" 2>/dev/null || echo '?'))${reset}"
+        else
+            warn "${unit} is not enabled"
+        fi
+    done
+    if systemctl is-failed --quiet kestrel-brew-bling.service 2>/dev/null; then
+        warn "terminal tools install failed last boot; it retries on the next boot (journalctl -u kestrel-brew-bling)"
+    fi
+    echo
+    title "Terminal bling"
+    if [[ -e "${bling_flag}" ]]; then warn "off for ${USER} (kestrel bling on)"; else ok "on for ${USER}"; fi
+    if [[ -s /usr/share/kestrel/missing-optional-packages ]]; then
+        echo
+        title "Optional packages this image was built without"
+        sed 's/^/  - /' /usr/share/kestrel/missing-optional-packages
+    fi
+}
+
+cmd_update() {
+    if [[ "${1:-}" == "--reboot" ]]; then
+        sudo bootc upgrade --apply
+    else
+        sudo bootc upgrade && echo "Staged. It applies the next time you reboot."
+    fi
+}
+
+cmd_rollback() {
+    sudo bootc rollback && echo "The previous image boots next time you reboot."
+}
+
+cmd_bling() {
+    case "${1:-}" in
+        on)  rm -f "${bling_flag}"; echo "Bling on. Open a new terminal." ;;
+        off) mkdir -p "$(dirname "${bling_flag}")"; touch "${bling_flag}"; echo "Bling off. Open a new terminal." ;;
+        *)   echo "usage: kestrel bling on|off"; return 2 ;;
+    esac
+}
+
+cmd_controllers() {
+    title "Drivers"
+    local mod
+    for mod in xpad hid_microsoft hid_xpadneo uinput; do
+        if [[ -d "/sys/module/${mod}" ]]; then
+            ok "${mod} loaded"
+        elif modinfo "${mod}" >/dev/null 2>&1; then
+            ok "${mod} available ${dim}(loads when a controller connects)${reset}"
+        elif [[ "${mod}" == hid_xpadneo ]]; then
+            : # optional out-of-tree driver, not shipped
+        else
+            bad "${mod} missing from this kernel"
+        fi
+    done
+    echo
+    title "Bluetooth"
+    if systemctl is-active --quiet bluetooth.service 2>/dev/null; then
+        ok "bluetooth.service running"
+        if command -v bluetoothctl >/dev/null; then
+            bluetoothctl devices Connected 2>/dev/null | sed 's/^Device /  • /'
+        fi
+    else
+        warn "bluetooth.service is not running (sudo systemctl enable --now bluetooth)"
+    fi
+    echo
+    title "Connected game controllers"
+    local found=0 name
+    for dev in /sys/class/input/js*; do
+        [[ -e "${dev}/device/name" ]] || continue
+        name="$(<"${dev}/device/name")"
+        printf '  • %s %s(/dev/input/%s)%s\n' "${name}" "${dim}" "$(basename "${dev}")" "${reset}"
+        found=1
+    done
+    ((found)) || warn "none detected. Plug in over USB, or pair in System Settings → Bluetooth."
+}
+
+cmd_cowork() {
+    title "Claude Desktop Cowork requirements"
+    if grep -Eq '(vmx|svm)' /proc/cpuinfo; then
+        ok "CPU virtualization (VT-x/AMD-V) enabled"
+    else
+        bad "CPU virtualization is off — enable VT-x in your firmware (BIOS/UEFI) settings"
+    fi
+    local dev
+    for dev in /dev/kvm /dev/vhost-vsock; do
+        if [[ ! -e "${dev}" ]]; then
+            bad "${dev} missing"
+        elif [[ -r "${dev}" && -w "${dev}" ]]; then
+            ok "${dev} accessible"
+        else
+            bad "${dev} not accessible — run: sudo usermod -aG kvm ${USER}  (then log out and in)"
+        fi
+    done
+    local bin
+    for bin in /usr/bin/qemu-system-x86_64 /usr/libexec/virtiofsd; do
+        [[ -x "${bin}" ]] && ok "${bin}" || bad "${bin} missing"
+    done
+    if [[ -e /usr/share/OVMF/OVMF_CODE.fd ]]; then ok "UEFI firmware (OVMF)"; else bad "OVMF firmware missing"; fi
+    command -v claude-desktop >/dev/null && ok "claude-desktop installed" || bad "claude-desktop missing"
+}
+
+case "${1:-help}" in
+    status)       cmd_status ;;
+    update)       shift; cmd_update "$@" ;;
+    rollback)     cmd_rollback ;;
+    bling)        shift; cmd_bling "$@" ;;
+    controllers)  cmd_controllers ;;
+    cowork)       cmd_cowork ;;
+    help|-h|--help) cmd_help ;;
+    *) echo "Unknown command: $1"; echo; cmd_help; exit 2 ;;
+esac

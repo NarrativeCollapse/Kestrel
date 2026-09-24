@@ -17,6 +17,13 @@ test -f /usr/share/homebrew.tar.zst
 systemctl enable brew-setup.service brew-update.timer brew-upgrade.timer
 systemctl enable kestrel-brew-bling.service
 
+# --- zsh and fish get the same bling (bash: /etc/profile.d/kestrel-bling.sh) ---
+source "$(dirname "$0")/lib.sh"
+install_optional zsh fish
+if [[ -f /etc/zshrc ]] && ! grep -F 'kestrel/bling.zsh' /etc/zshrc >/dev/null; then
+    printf '\n# Kestrel terminal bling\n[ -f /usr/share/kestrel/bling.zsh ] && source /usr/share/kestrel/bling.zsh\n' >> /etc/zshrc
+fi
+
 # --- Nerd Font symbols: icons for starship/eza/fastfetch, used as a fallback by any font ---
 WORK="$(mktemp -d)"
 NF_URL="https://github.com/ryanoasis/nerd-fonts/releases/download/${NERD_FONTS_VERSION}"

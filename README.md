@@ -9,7 +9,10 @@ An immutable (bootc) daily-driver desktop built on **AlmaLinux Atomic Desktop (K
 - **Intel graphics stack**: Mesa Iris/ANV, VA-API media driver, firmware, GPU tools
 - **Gaming tuning**: `vm.max_map_count`, split-lock mitigation off, zram swap, GameMode, tuned power profiles, controller udev rules (Steam, Sony, Nintendo, Xbox, 8BitDo…)
 - **Claude Desktop** (Chat, Cowork, Code) from Anthropic's official Linux build, with QEMU/KVM for Cowork
-- **Terminal bling** (after [Bazzite](https://github.com/ublue-os/bazzite)): Homebrew, starship prompt, Nerd Font icons, `eza`, `ugrep`, `atuin` history search (Ctrl+R), `zoxide`, fastfetch banner
+- **Terminal bling** (after [Bazzite](https://github.com/ublue-os/bazzite)): Homebrew, starship prompt, Nerd Font icons, `eza`, `ugrep`, `atuin` history search (Ctrl+R), `zoxide`, Kestrel fastfetch banner — in bash, zsh and fish
+- **Xbox controllers** over USB (`xpad`) and Bluetooth (`hid-microsoft`), with BlueZ tuned for reliable re-pairing
+- **`kestrel` helper**: `kestrel status | update | rollback | bling on/off | controllers | cowork`
+- **Background OS updates**: new images download daily and apply on your next reboot (never an automatic reboot)
 - **Atomic updates and rollback** via `bootc`
 
 ## Design notes and limitations
@@ -23,6 +26,8 @@ An immutable (bootc) daily-driver desktop built on **AlmaLinux Atomic Desktop (K
 | Claude Desktop | Anthropic ships Linux builds only as a `.deb` for Ubuntu/Debian. `60-claude-desktop.sh` verifies the newest one against Anthropic's signed apt index and unpacks it into `/usr`; it updates with the weekly rebuild. Not officially supported on EL10 by Anthropic. Cowork's VM uses EL10's `qemu-kvm` through Debian-style path links; if Cowork reports a KVM permission error, run `sudo usermod -aG kvm $USER` and log in again. Computer Use and dictation aren't in the Linux beta. Before making your image public, check that Anthropic's terms allow redistributing the app. |
 | Homebrew | From [ublue-os/brew](https://github.com/ublue-os/brew). Unpacked to `/var/home/linuxbrew` on first boot and owned by the **first user account (UID 1000)**; other accounts can use but not install. Brew updates every 6h and upgrades every 8h in the background. Brew's `bin` comes *after* the system's in `PATH`, so it never overrides system tools. |
 | Terminal bling | `kestrel-brew-bling.service` installs the tools in `/usr/share/kestrel/Brewfile` on first boot (needs network; retries each boot until it succeeds). Starship is on for everyone in bash; opt out with `touch ~/.config/kestrel/no-bling`. Atuin takes over Ctrl+R only, not the Up arrow. |
+| Xbox controllers | Wired and Bluetooth pads use in-kernel drivers. The **Xbox Wireless Adapter** (USB dongle) is not supported: it needs the out-of-tree `xone` driver plus Microsoft firmware, and unsigned modules won't load with Secure Boot on. Use Bluetooth or a cable. `kestrel controllers` shows what's detected. |
+| Boot test | After each image build, CI boots the image in a VM and waits for the login screen (**Boot test** workflow; serial log is kept as an artifact). The image is already published by then, so if it fails, don't reboot into the staged update. |
 | Optional packages | Nice-to-haves go through `install_optional` (`files/scripts/lib.sh`). If EPEL drops one, the build logs a warning and carries on. |
 
 ## Layout
@@ -36,14 +41,18 @@ files/scripts/
   40-desktop.sh               KDE apps + CLI tools
   50-branding.sh              name in os-release / About This System  ← rename here
   60-claude-desktop.sh        Claude Desktop from Anthropic's apt repo + Cowork's QEMU/KVM
-  70-shell.sh                 Homebrew, Nerd Font symbols, enables bling services
+  35-controllers.sh           Xbox pad drivers (xpad, hid-microsoft), Bluetooth
+  70-shell.sh                 Homebrew, Nerd Font symbols, zsh/fish, enables bling services
+  80-updates.sh               daily background image download, no auto-reboot
   lib.sh                      install_optional helper
 files/system/                 copied into / verbatim
   etc/flatpak/default-flatpaks/system/install   default Flatpak apps
   usr/bin/kestrel-flatpak-extras                Vulkan layers + drive access for Steam
   etc/profile.d/kestrel-bling.sh                starship, eza, ugrep, atuin, zoxide
   usr/share/kestrel/Brewfile                    CLI tools installed with Homebrew
-  usr/share/kestrel/fastfetch.jsonc             fastfetch banner
+  usr/share/kestrel/fastfetch.jsonc             fastfetch banner (+ logo.txt)
+  usr/bin/kestrel                               helper command
+  usr/lib/systemd/system/kestrel-os-update.*    daily `bootc upgrade` (stage only)
   usr/lib/sysctl.d/60-kestrel-gaming.conf
   usr/lib/udev/rules.d/70-kestrel-game-controllers.rules
   usr/lib/systemd/zram-generator.conf
@@ -67,10 +76,11 @@ files/system/                 copied into / verbatim
 - **Fresh install:** boot the ISO and follow the installer.
 - **From an existing AlmaLinux Atomic install:** `sudo bootc switch ghcr.io/<you>/kestrel:latest` and reboot.
 
-On first boot, Flatpaks install in the background (you'll get a notification). About 10 minutes later the MangoHud and gamescope layers are added.
+On first boot, Flatpaks install in the background (you'll get a notification). About 10 minutes later the MangoHud and gamescope layers are added. Homebrew is unpacked for the first user account created in the installer, then the terminal tools install (needs network).
 
 ## Using it
 
+- `kestrel status` shows the booted/staged image and background services; `kestrel help` lists the rest
 - MangoHud in a Steam game: launch options `MANGOHUD=1 %command%`
 - gamescope: `gamescope -W 1920 -H 1080 -f -- %command%`
 - GameMode: `gamemoderun %command%`
@@ -91,4 +101,6 @@ make run-qemu-iso
 
 ## Updating
 
-The image rebuilds every Sunday. Installed systems check for updates automatically; apply them with `sudo bootc upgrade` and a reboot. Use `sudo bootc rollback` if an update misbehaves.
+The image rebuilds every Sunday and on every push to `main`. Installed systems download the newest image in the background once a day (`kestrel-os-update.timer`) and switch to it the next time you reboot — they never reboot on their own. `kestrel update` fetches it right away; `kestrel rollback` (or `sudo bootc rollback`) goes back to the previous image if an update misbehaves.
+
+The package on ghcr.io must be **public** for installed machines to download updates. A **Keep scheduled workflows alive** workflow stops GitHub from switching off the weekly rebuild after 60 days of repo inactivity.

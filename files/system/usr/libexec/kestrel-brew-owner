@@ -1,0 +1,12 @@
+#!/usr/bin/bash
+# Print "user:group" of the account that should own Homebrew: the first regular user
+# (lowest UID from 1000 up), i.e. the account created in the installer.
+# ublue-os/brew assumes UID 1000; this also works when the installer picked another UID.
+set -euo pipefail
+entry="$(getent passwd | awk -F: '$3 >= 1000 && $3 < 60000 {print $3 ":" $1}' | sort -n | head -n1)"
+if [[ -z "${entry}" ]]; then
+    echo "1000:1000"
+    exit 0
+fi
+user="${entry#*:}"
+echo "${user}:$(id -gn "${user}")"

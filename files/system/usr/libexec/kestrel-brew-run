@@ -1,0 +1,13 @@
+#!/usr/bin/bash
+# Run brew as whoever owns /home/linuxbrew/.linuxbrew (Homebrew refuses to run as root).
+# Used by brew-update, brew-upgrade and kestrel-brew-bling in place of a fixed User=1000.
+set -euo pipefail
+PREFIX=/home/linuxbrew/.linuxbrew
+owner="$(stat -c %U "${PREFIX}")"
+home="$(getent passwd "${owner}" | cut -d: -f6)"
+exec runuser -u "${owner}" -- /usr/bin/env \
+    HOME="${home:-/home/linuxbrew}" \
+    HOMEBREW_CELLAR="${PREFIX}/Cellar" \
+    HOMEBREW_PREFIX="${PREFIX}" \
+    HOMEBREW_REPOSITORY="${PREFIX}/Homebrew" \
+    "${PREFIX}/bin/brew" "$@"

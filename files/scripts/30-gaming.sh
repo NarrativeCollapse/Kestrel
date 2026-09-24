@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Host-side gaming support.
 # EL10 has no 32-bit (i686) packages, so Steam/Proton/Wine run as Flatpaks
-# (see /etc/flatpak/default-flatpaks). This script handles what must live on the host:
+# installed by the user from Bazaar. This script handles what must live on the host:
 # power profiles, zram, GameMode, and enabling Kestrel's services.
 # sysctl, udev and module files come from files/system.
 

@@ -5,7 +5,8 @@ An immutable (bootc) daily-driver desktop built on **AlmaLinux Atomic Desktop (K
 - **KDE Plasma 6**: the newest build EPEL 10 ships, pulled in by a weekly rebuild
 - **LibreWolf** as the default browser (Flatpak; Firefox removed)
 - **Bazaar** app store (Flatpak) in place of KDE Discover; system Flatpaks auto-update daily
-- **Steam, Heroic, Lutris, ProtonUp-Qt, GOverlay** as Flatpaks, with MangoHud and gamescope Vulkan layers matched to Steam's runtime
+- **Only LibreWolf and Bazaar install automatically**; you choose everything else (Steam, Heroic, Lutris, …) in Bazaar
+- **Steam-ready**: install Steam (Flatpak) and Kestrel adds MangoHud and gamescope Vulkan layers matched to Steam's runtime
 - **Intel graphics stack**: Mesa Iris/ANV, VA-API media driver, firmware, GPU tools
 - **Gaming tuning**: `vm.max_map_count`, split-lock mitigation off, zram swap, GameMode, tuned power profiles, controller udev rules (Steam, Sony, Nintendo, Xbox, 8BitDo…)
 - **Claude Desktop** (Chat, Cowork, Code) from Anthropic's official Linux build, with QEMU/KVM for Cowork
@@ -49,7 +50,7 @@ files/scripts/
   80-updates.sh               daily background image download, no auto-reboot
   lib.sh                      install_optional helper
 files/system/                 copied into / verbatim
-  etc/flatpak/default-flatpaks/system/install   default Flatpak apps
+  etc/flatpak/default-flatpaks/system/install   Flatpaks installed on first boot (LibreWolf, Bazaar)
   usr/bin/kestrel-flatpak-extras                Vulkan layers + drive access for Steam
   etc/profile.d/kestrel-bling.sh                starship, eza, ugrep, atuin, zoxide
   usr/share/kestrel/Brewfile                    CLI tools installed with Homebrew
@@ -97,7 +98,7 @@ Without the key, `xpad` is built unsigned and only loads with Secure Boot off.
 - **Fresh install:** boot the ISO and follow the installer.
 - **From an existing AlmaLinux Atomic install:** `sudo bootc switch ghcr.io/<you>/kestrel:latest` and reboot.
 
-On first boot, Flatpaks install in the background (you'll get a notification). About 10 minutes later the MangoHud and gamescope layers are added. Homebrew is unpacked for the first user account created in the installer, then the terminal tools install (needs network).
+On first boot, LibreWolf and Bazaar install in the background (you'll get a notification); install the rest of your apps from Bazaar. Once Steam is installed, the MangoHud and gamescope layers are added within a day (or run `sudo systemctl start kestrel-flatpak-extras`). Homebrew is unpacked for the first user account created in the installer, then the terminal tools install (needs network).
 
 ## Using it
 
@@ -105,7 +106,7 @@ On first boot, Flatpaks install in the background (you'll get a notification). A
 - MangoHud in a Steam game: launch options `MANGOHUD=1 %command%`
 - gamescope: `gamescope -W 1920 -H 1080 -f -- %command%`
 - GameMode: `gamemoderun %command%`
-- Proton-GE: open **ProtonUp-Qt**, add GE-Proton for Steam
+- Proton-GE: install **ProtonUp-Qt** from Bazaar, then add GE-Proton for Steam
 - Extra game drives: mount under `/run/media` or `/mnt`; Steam and Heroic can already see them.
 
 ## Credits

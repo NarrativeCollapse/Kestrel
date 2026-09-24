@@ -101,7 +101,7 @@ jobs:
           test -f /usr/lib/sysctl.d/60-kestrel-gaming.conf
           test -f /usr/lib/udev/rules.d/70-kestrel-game-controllers.rules
           test -x /usr/bin/kestrel-flatpak-extras
-          grep -q com.valvesoftware.Steam /etc/flatpak/default-flatpaks/system/install
+          if grep -q com.valvesoftware.Steam /etc/flatpak/default-flatpaks/system/install; then echo 'Steam should not auto-install'; exit 1; fi
           grep -q io.gitlab.librewolf-community /etc/flatpak/default-flatpaks/system/install
           if rpm -q firefox; then echo "Firefox RPM still installed"; exit 1; fi
           if rpm -qa "plasma-discover*" | grep .; then echo "Discover still installed"; exit 1; fi

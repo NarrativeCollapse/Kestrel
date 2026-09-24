@@ -96,6 +96,9 @@ jobs:
           systemctl is-enabled kestrel-flatpak-update.timer
           systemctl is-enabled kestrel-flatpak-extras.timer
           systemctl is-enabled system-flatpak-setup.timer
+          test -x /usr/bin/claude-desktop
+          rpm -q qemu-kvm-core edk2-ovmf virtiofsd
+          test -e /usr/bin/qemu-system-x86_64
           EOF
 
           podman run --rm \

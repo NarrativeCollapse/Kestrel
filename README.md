@@ -8,6 +8,7 @@ An immutable (bootc) daily-driver desktop built on **AlmaLinux Atomic Desktop (K
 - **Steam, Heroic, Lutris, ProtonUp-Qt, GOverlay** as Flatpaks, with MangoHud and gamescope Vulkan layers matched to Steam's runtime
 - **Intel graphics stack**: Mesa Iris/ANV, VA-API media driver, firmware, GPU tools
 - **Gaming tuning**: `vm.max_map_count`, split-lock mitigation off, zram swap, GameMode, tuned power profiles, controller udev rules (Steam, Sony, Nintendo, Xbox, 8BitDo…)
+- **Claude Desktop** (Chat, Cowork, Code) from Anthropic's official Linux build, with QEMU/KVM for Cowork
 - **Atomic updates and rollback** via `bootc`
 
 ## Design notes and limitations
@@ -18,6 +19,7 @@ An immutable (bootc) daily-driver desktop built on **AlmaLinux Atomic Desktop (K
 | Steam / 32-bit | EL10 has **no i686 packages**, so native Steam RPMs are impossible. Steam runs as a Flatpak (its own 32-bit runtime). |
 | Mesa for games | Flatpak games use the Flatpak runtime's Mesa, which is newer than EL10's. Host Mesa only drives the desktop and native apps. |
 | Kernel | Stock EL10 kernel (6.12 + Red Hat backports). No `ntsync`; Proton falls back to fsync/esync. |
+| Claude Desktop | Anthropic ships Linux builds only as a `.deb` for Ubuntu/Debian. `60-claude-desktop.sh` verifies the newest one against Anthropic's signed apt index and unpacks it into `/usr`; it updates with the weekly rebuild. Not officially supported on EL10 by Anthropic. Cowork's VM uses EL10's `qemu-kvm` through Debian-style path links; if Cowork reports a KVM permission error, run `sudo usermod -aG kvm $USER` and log in again. Computer Use and dictation aren't in the Linux beta. Before making your image public, check that Anthropic's terms allow redistributing the app. |
 | Optional packages | Nice-to-haves go through `install_optional` (`files/scripts/lib.sh`). If EPEL drops one, the build logs a warning and carries on. |
 
 ## Layout
@@ -30,6 +32,7 @@ files/scripts/
   30-gaming.sh                tuned-ppd, zram, GameMode, enables services
   40-desktop.sh               KDE apps + CLI tools
   50-branding.sh              name in os-release / About This System  ← rename here
+  60-claude-desktop.sh        Claude Desktop from Anthropic's apt repo + Cowork's QEMU/KVM
   lib.sh                      install_optional helper
 files/system/                 copied into / verbatim
   etc/flatpak/default-flatpaks/system/install   default Flatpak apps

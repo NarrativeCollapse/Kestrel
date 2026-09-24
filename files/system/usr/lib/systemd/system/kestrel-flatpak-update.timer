@@ -1,0 +1,11 @@
+[Unit]
+Description=Daily system Flatpak updates (Kestrel)
+
+[Timer]
+OnBootSec=15min
+OnUnitActiveSec=1d
+RandomizedDelaySec=30min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,8 @@
+[Unit]
+Description=Kestrel gaming Flatpak extras (Vulkan layers, library drive access)
+Wants=network-online.target
+After=network-online.target system-flatpak-setup.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/kestrel-flatpak-extras

@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+# Kestrel: post-install Flatpak setup for gaming.
+#  - Installs the MangoHud and gamescope Vulkan layers on the SAME runtime branch
+#    Steam uses (they're runtime extensions; a mismatched branch is silently ignored).
+#  - Lets Steam see removable/secondary drives for extra game libraries.
+# Safe to run repeatedly; runs from kestrel-flatpak-extras.timer.
+
+set -uo pipefail
+
+STEAM=com.valvesoftware.Steam
+ARCH="$(flatpak --default-arch)"
+
+if ! flatpak info --system "$STEAM" >/dev/null 2>&1; then
+    echo "Steam Flatpak not installed yet; will retry on the next timer run."
+    exit 0
+fi
+
+# e.g. "org.freedesktop.Platform/x86_64/25.08" -> "25.08"
+BRANCH="$(flatpak info --system --show-runtime "$STEAM" | awk -F/ '{print $3}')"
+if [[ -z "$BRANCH" ]]; then
+    echo "Could not determine Steam's runtime branch." >&2
+    exit 1
+fi
+
+for ext in org.freedesktop.Platform.VulkanLayer.MangoHud org.freedesktop.Platform.VulkanLayer.gamescope; do
+    ref="runtime/${ext}/${ARCH}/${BRANCH}"
+    if flatpak list --system --runtime --columns=ref | grep -qxF "${ext}/${ARCH}/${BRANCH}"; then
+        echo "$ref already installed"
+    else
+        echo "Installing $ref"
+        flatpak install --system --noninteractive flathub "$ref" || echo "WARN: $ref not available on Flathub"
+    fi
+done
+
+# Secondary drives: /run/media (auto-mounted USB/SATA) and /mnt (fstab mounts).
+flatpak override --system --filesystem=/run/media --filesystem=/mnt "$STEAM"
+
+# Same for Heroic and Lutris if present.
+for app in com.heroicgameslauncher.hgl net.lutris.Lutris; do
+    if flatpak info --system "$app" >/dev/null 2>&1; then
+        flatpak override --system --filesystem=/run/media --filesystem=/mnt "$app"
+    fi
+done
+
+exit 0

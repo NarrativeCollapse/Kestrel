@@ -1,0 +1,9 @@
+# Kestrel: LibreWolf (Flatpak) is the default web browser.
+[Default Applications]
+x-scheme-handler/http=io.gitlab.librewolf-community.desktop
+x-scheme-handler/https=io.gitlab.librewolf-community.desktop
+x-scheme-handler/about=io.gitlab.librewolf-community.desktop
+x-scheme-handler/unknown=io.gitlab.librewolf-community.desktop
+text/html=io.gitlab.librewolf-community.desktop
+application/xhtml+xml=io.gitlab.librewolf-community.desktop
+application/pdf=org.kde.okular.desktop

@@ -1,0 +1,9 @@
+[Unit]
+Description=Update system Flatpaks (Kestrel)
+Wants=network-online.target
+After=network-online.target system-flatpak-setup.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/flatpak update --system --noninteractive --assumeyes
+ExecStartPost=/usr/bin/flatpak uninstall --system --unused --noninteractive --assumeyes

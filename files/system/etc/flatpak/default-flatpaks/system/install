@@ -1,0 +1,18 @@
+# Kestrel default system Flatpaks — installed automatically ~30s after first boot
+# (and re-checked every boot). One Flatpak app ID per line. Delete a line to drop it.
+# Vulkan layers (MangoHud, gamescope) are handled by kestrel-flatpak-extras because
+# they must match Steam's runtime version.
+
+# --- Gaming ---
+com.valvesoftware.Steam
+com.heroicgameslauncher.hgl
+net.lutris.Lutris
+net.davidotek.pupgui2
+io.github.benjamimgois.goverlay
+
+# --- Everyday ---
+io.gitlab.librewolf-community
+org.videolan.VLC
+io.github.kolunmi.Bazaar
+com.github.tchx84.Flatseal
+io.github.flattool.Warehouse

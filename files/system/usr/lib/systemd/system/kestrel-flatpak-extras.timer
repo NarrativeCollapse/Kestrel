@@ -1,0 +1,12 @@
+[Unit]
+Description=Timer for kestrel-flatpak-extras
+
+[Timer]
+# After system-flatpak-setup (30s) has had time to install Steam; then daily,
+# so the layers follow Steam when it moves to a new runtime branch.
+OnBootSec=10min
+OnUnitActiveSec=1d
+Persistent=true
+
+[Install]
+WantedBy=timers.target

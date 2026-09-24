@@ -1,0 +1,23 @@
+# Kestrel: give the logged-in user access to game controllers.
+# Needed because Steam runs as a Flatpak and EL10 has no steam-devices package.
+# "uaccess" grants access only to the user at the active local seat.
+
+# Virtual input devices (Steam Input, controller remapping)
+KERNEL=="uinput", SUBSYSTEM=="misc", TAG+="uaccess", OPTIONS+="static_node=uinput"
+
+# Raw HID access, USB and Bluetooth, by vendor ID
+# 28de Valve (Steam Controller, Steam Deck, Index)
+# 054c Sony (DualShock 4, DualSense)
+# 057e Nintendo (Switch Pro, Joy-Con)
+# 045e Microsoft (Xbox controllers)
+# 2dc8 8BitDo
+# 0f0d Hori
+# 0e6f PDP
+# 20d6 PowerA
+# 1532 Razer
+# 046d Logitech
+KERNEL=="hidraw*", ATTRS{idVendor}=="28de|054c|057e|045e|2dc8|0f0d|0e6f|20d6|1532|046d", TAG+="uaccess"
+KERNEL=="hidraw*", KERNELS=="*:28DE:*|*:054C:*|*:057E:*|*:045E:*|*:2DC8:*", TAG+="uaccess"
+
+# Valve USB devices (firmware updates, Steam Controller dongle)
+SUBSYSTEM=="usb", ATTRS{idVendor}=="28de", TAG+="uaccess"

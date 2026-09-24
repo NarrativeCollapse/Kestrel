@@ -2,3 +2,4 @@ Welcome to Kestrel — AlmaLinux Atomic KDE for gaming.
   Update:    sudo bootc upgrade   (then reboot)
   Rollback:  sudo bootc rollback
   Status:    bootc status
+  CLI apps:  brew install <name>   (Homebrew)

@@ -1,12 +1,16 @@
 # ba0fde3d-bee7-4307-b97b-17d0d20aff50
 # Kestrel — an AlmaLinux Atomic KDE respin tuned for desktop gaming on Intel graphics.
 
+# Homebrew for bootc images (tarball, setup/update services, shell integration) from Universal Blue.
+FROM ghcr.io/ublue-os/brew:latest@sha256:e9a72571b7644b6277f0638b6a3c5e497e265e1098ab91224567acbdeb8b74ea AS brew
+
 # Allow build scripts to be referenced without being copied into the final image
 FROM scratch AS ctx
 
 COPY files/system /system_files/
 COPY --chmod=0755 files/scripts /build_files/
 COPY *.pub /keys/
+COPY --from=brew /system_files /brew_files/
 
 # Base Image: AlmaLinux Atomic Desktop, KDE Plasma variant.
 # Tip: pin a digest (":10@sha256:...") once the first CI build succeeds; Dependabot will keep it fresh.

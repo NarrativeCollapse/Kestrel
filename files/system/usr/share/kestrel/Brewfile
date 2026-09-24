@@ -1,0 +1,8 @@
+# Kestrel shell tools, installed on first boot by kestrel-brew-bling.service
+# and kept current by brew-upgrade.timer. Add your own with `brew install`.
+brew "atuin"
+brew "bash-preexec"
+brew "eza"
+brew "starship"
+brew "ugrep"
+brew "zoxide"

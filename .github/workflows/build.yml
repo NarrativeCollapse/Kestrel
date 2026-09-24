@@ -99,6 +99,10 @@ jobs:
           test -x /usr/bin/claude-desktop
           rpm -q qemu-kvm-core edk2-ovmf virtiofsd
           test -e /usr/bin/qemu-system-x86_64
+          test -f /usr/share/homebrew.tar.zst
+          systemctl is-enabled brew-setup.service brew-update.timer brew-upgrade.timer kestrel-brew-bling.service
+          bash -n /etc/profile.d/kestrel-bling.sh
+          fc-list | grep -q 'Symbols Nerd Font'
           EOF
 
           podman run --rm \

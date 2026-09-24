@@ -9,6 +9,7 @@ An immutable (bootc) daily-driver desktop built on **AlmaLinux Atomic Desktop (K
 - **Intel graphics stack**: Mesa Iris/ANV, VA-API media driver, firmware, GPU tools
 - **Gaming tuning**: `vm.max_map_count`, split-lock mitigation off, zram swap, GameMode, tuned power profiles, controller udev rules (Steam, Sony, Nintendo, Xbox, 8BitDo…)
 - **Claude Desktop** (Chat, Cowork, Code) from Anthropic's official Linux build, with QEMU/KVM for Cowork
+- **Terminal bling** (after [Bazzite](https://github.com/ublue-os/bazzite)): Homebrew, starship prompt, Nerd Font icons, `eza`, `ugrep`, `atuin` history search (Ctrl+R), `zoxide`, fastfetch banner
 - **Atomic updates and rollback** via `bootc`
 
 ## Design notes and limitations
@@ -20,6 +21,8 @@ An immutable (bootc) daily-driver desktop built on **AlmaLinux Atomic Desktop (K
 | Mesa for games | Flatpak games use the Flatpak runtime's Mesa, which is newer than EL10's. Host Mesa only drives the desktop and native apps. |
 | Kernel | Stock EL10 kernel (6.12 + Red Hat backports). No `ntsync`; Proton falls back to fsync/esync. |
 | Claude Desktop | Anthropic ships Linux builds only as a `.deb` for Ubuntu/Debian. `60-claude-desktop.sh` verifies the newest one against Anthropic's signed apt index and unpacks it into `/usr`; it updates with the weekly rebuild. Not officially supported on EL10 by Anthropic. Cowork's VM uses EL10's `qemu-kvm` through Debian-style path links; if Cowork reports a KVM permission error, run `sudo usermod -aG kvm $USER` and log in again. Computer Use and dictation aren't in the Linux beta. Before making your image public, check that Anthropic's terms allow redistributing the app. |
+| Homebrew | From [ublue-os/brew](https://github.com/ublue-os/brew). Unpacked to `/var/home/linuxbrew` on first boot and owned by the **first user account (UID 1000)**; other accounts can use but not install. Brew updates every 6h and upgrades every 8h in the background. Brew's `bin` comes *after* the system's in `PATH`, so it never overrides system tools. |
+| Terminal bling | `kestrel-brew-bling.service` installs the tools in `/usr/share/kestrel/Brewfile` on first boot (needs network; retries each boot until it succeeds). Starship is on for everyone in bash; opt out with `touch ~/.config/kestrel/no-bling`. Atuin takes over Ctrl+R only, not the Up arrow. |
 | Optional packages | Nice-to-haves go through `install_optional` (`files/scripts/lib.sh`). If EPEL drops one, the build logs a warning and carries on. |
 
 ## Layout
@@ -33,10 +36,14 @@ files/scripts/
   40-desktop.sh               KDE apps + CLI tools
   50-branding.sh              name in os-release / About This System  ← rename here
   60-claude-desktop.sh        Claude Desktop from Anthropic's apt repo + Cowork's QEMU/KVM
+  70-shell.sh                 Homebrew, Nerd Font symbols, enables bling services
   lib.sh                      install_optional helper
 files/system/                 copied into / verbatim
   etc/flatpak/default-flatpaks/system/install   default Flatpak apps
   usr/bin/kestrel-flatpak-extras                Vulkan layers + drive access for Steam
+  etc/profile.d/kestrel-bling.sh                starship, eza, ugrep, atuin, zoxide
+  usr/share/kestrel/Brewfile                    CLI tools installed with Homebrew
+  usr/share/kestrel/fastfetch.jsonc             fastfetch banner
   usr/lib/sysctl.d/60-kestrel-gaming.conf
   usr/lib/udev/rules.d/70-kestrel-game-controllers.rules
   usr/lib/systemd/zram-generator.conf
@@ -69,6 +76,10 @@ On first boot, Flatpaks install in the background (you'll get a notification). A
 - GameMode: `gamemoderun %command%`
 - Proton-GE: open **ProtonUp-Qt**, add GE-Proton for Steam
 - Extra game drives: mount under `/run/media` or `/mnt`; Steam and Heroic can already see them.
+
+## Credits
+
+`kestrel-bling.sh` and `fastfetch.jsonc` are adapted from [Bazzite](https://github.com/ublue-os/bazzite); Homebrew integration comes from [ublue-os/brew](https://github.com/ublue-os/brew). Both are Apache-2.0 (copy in `/usr/share/licenses/kestrel/bazzite-LICENSE`).
 
 ## Local build
 

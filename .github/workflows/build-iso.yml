@@ -46,6 +46,11 @@ jobs:
       REGISTRY_USER: ${{ needs.set-env.outputs.REGISTRY_USER }}
       upload-to-cloudflare: false
       # bucket: ${{ secrets.R2_BUCKET }}
+    # The called workflow's job requests these; a caller must grant at least as much.
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
     secrets:
       REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       # R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}

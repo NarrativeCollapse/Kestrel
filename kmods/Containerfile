@@ -1,0 +1,13 @@
+# Kestrel kernel modules (xpad), built against the kernel the Kestrel image ships and
+# published as ghcr.io/<owner>/kestrel-kmods; the main Dockerfile copies /kmods from it.
+# Build from the repo root:
+#   podman build --secret id=kmod_key,src=<key.pem or empty file> -f kmods/Containerfile .
+FROM quay.io/almalinuxorg/atomic-desktop-kde:10 AS builder
+RUN --mount=type=bind,source=kmods,target=/src \
+    --mount=type=bind,source=files/system/usr/share/kestrel,target=/files/system/usr/share/kestrel \
+    --mount=type=secret,id=kmod_key \
+    --mount=type=tmpfs,dst=/tmp \
+    /src/build.sh
+
+FROM scratch
+COPY --from=builder /out /kmods

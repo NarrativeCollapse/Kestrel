@@ -27,7 +27,8 @@ An immutable (bootc) daily-driver desktop built on **AlmaLinux Atomic Desktop (K
 | Claude Desktop | Anthropic ships Linux builds only as a `.deb` for Ubuntu/Debian. `60-claude-desktop.sh` verifies the newest one against Anthropic's signed apt index and unpacks it into `/usr`; it updates with the weekly rebuild. Not officially supported on EL10 by Anthropic. Cowork's VM uses EL10's `qemu-kvm` through Debian-style path links; if Cowork reports a KVM permission error, run `sudo usermod -aG kvm $USER` and log in again. Computer Use and dictation aren't in the Linux beta. Before making your image public, check that Anthropic's terms allow redistributing the app. |
 | Homebrew | From [ublue-os/brew](https://github.com/ublue-os/brew). Unpacked to `/var/home/linuxbrew` on first boot and owned by the **first user account (UID 1000)**; other accounts can use but not install. Brew updates every 6h and upgrades every 8h in the background. Brew's `bin` comes *after* the system's in `PATH`, so it never overrides system tools. |
 | Terminal bling | `kestrel-brew-bling.service` installs the tools in `/usr/share/kestrel/Brewfile` on first boot (needs network; retries each boot until it succeeds). Starship is on for everyone in bash; opt out with `touch ~/.config/kestrel/no-bling`. Atuin takes over Ctrl+R only, not the Up arrow. |
-| Xbox controllers | Wired and Bluetooth pads use in-kernel drivers. The **Xbox Wireless Adapter** (USB dongle) is not supported: it needs the out-of-tree `xone` driver plus Microsoft firmware, and unsigned modules won't load with Secure Boot on. Use Bluetooth or a cable. `kestrel controllers` shows what's detected. |
+| Xbox controllers | Bluetooth pads use the kernel's `hid-microsoft`. EL10's kernel has no `xpad` (wired pads), so Kestrel builds it from Linux 6.12's source (`kmods/`) and signs it with the Kestrel driver key; with Secure Boot on, run `kestrel secureboot` once (see **Secure Boot** below). The **Xbox Wireless Adapter** (USB dongle) isn't supported (needs the `xone` driver + Microsoft firmware). `kestrel controllers` shows what's detected. |
+| Video decode | Intel's full VA-API driver (`intel-media-driver`, "iHD") comes from **RPM Fusion** (free + nonfree), enabled in `10-base.sh`. |
 | Boot test | After each image build, CI boots the image in a VM and waits for the login screen (**Boot test** workflow; serial log is kept as an artifact). The image is already published by then, so if it fails, don't reboot into the staged update. |
 | Optional packages | Nice-to-haves go through `install_optional` (`files/scripts/lib.sh`). If EPEL drops one, the build logs a warning and carries on. |
 
@@ -35,6 +36,7 @@ An immutable (bootc) daily-driver desktop built on **AlmaLinux Atomic Desktop (K
 
 ```
 Dockerfile                    FROM atomic-desktop-kde:10, runs build.sh, bootc lint
+kmods/                        out-of-tree drivers (xpad), built + signed by build-kmods.yml
 files/scripts/
   10-base.sh                  refresh repos, upgrade to newest EPEL Plasma
   20-intel-graphics.sh        Mesa, Vulkan, VA-API, firmware
@@ -42,7 +44,7 @@ files/scripts/
   40-desktop.sh               KDE apps + CLI tools
   50-branding.sh              name in os-release / About This System  ← rename here
   60-claude-desktop.sh        Claude Desktop from Anthropic's apt repo + Cowork's QEMU/KVM
-  35-controllers.sh           Xbox pad drivers (xpad, hid-microsoft), Bluetooth
+  35-controllers.sh           Xbox pad drivers (xpad from kmods/, hid-microsoft), Bluetooth
   70-shell.sh                 Homebrew, Nerd Font symbols, zsh/fish, enables bling services
   80-updates.sh               daily background image download, no auto-reboot
   lib.sh                      install_optional helper
@@ -71,6 +73,24 @@ files/system/                 copied into / verbatim
    ```
 4. The **Build image** workflow publishes `ghcr.io/<you>/kestrel:latest`. Make the package public under your GitHub profile → Packages.
 5. Run **Build ISO** (Actions tab → workflow_dispatch) to get an installer ISO as a workflow artifact.
+
+## Secure Boot (driver signing key)
+
+Kestrel's own drivers (currently `xpad`) are signed in CI with a key only you hold. One-time setup:
+
+1. Create the key pair (any Linux machine with `openssl`):
+   ```sh
+   openssl req -new -x509 -newkey rsa:4096 -sha256 -nodes -days 36500 \
+     -subj "/CN=Kestrel kernel module signing key/" \
+     -addext "basicConstraints=critical,CA:FALSE" -addext "keyUsage=digitalSignature" \
+     -addext "extendedKeyUsage=codeSigning,1.3.6.1.4.1.2312.16.1.2" \
+     -keyout kestrel-kmod.key -out kestrel-kmod.pem
+   ```
+2. Repo **Settings → Secrets and variables → Actions → New repository secret**: name `KMOD_SIGNING_KEY`, value = the full contents of `kestrel-kmod.key`. Keep that file private (or delete it; CI has it now).
+3. Commit the **public** certificate as `files/system/usr/share/kestrel/secureboot/kestrel-kmod.pem`.
+4. After installing Kestrel with Secure Boot on: run `kestrel secureboot`, set a one-time password, reboot, and in the blue MOK screen choose *Enroll MOK → Continue → Yes*, enter the password, reboot.
+
+Without the key, `xpad` is built unsigned and only loads with Secure Boot off.
 
 ## Installing
 

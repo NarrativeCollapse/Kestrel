@@ -24,6 +24,7 @@ ${bold}kestrel${reset} — Kestrel helper
   ${bold}bling on|off${reset}     terminal prompt/aliases for your account (new terminals)
   ${bold}controllers${reset}      check Xbox/game controller support and list connected pads
   ${bold}cowork${reset}           check what Claude Desktop's Cowork needs (KVM, QEMU, vsock)
+  ${bold}secureboot${reset}       enroll Kestrel's driver key so xpad loads with Secure Boot on
   ${bold}help${reset}             this text
 EOF
 }
@@ -140,6 +141,38 @@ cmd_cowork() {
     command -v claude-desktop >/dev/null && ok "claude-desktop installed" || bad "claude-desktop missing"
 }
 
+cmd_secureboot() {
+    local pem=/usr/share/kestrel/secureboot/kestrel-kmod.pem der state answer
+    title "Secure Boot"
+    if ! command -v mokutil >/dev/null; then bad "mokutil not installed"; return 1; fi
+    state="$(mokutil --sb-state 2>/dev/null || true)"
+    echo "  ${state:-unknown}"
+    if [[ ! -f "${pem}" ]]; then
+        warn "this image has no Kestrel driver key (the repo's KMOD_SIGNING_KEY isn't set up yet)"
+        return 1
+    fi
+    der="$(mktemp --suffix=.der)"
+    openssl x509 -in "${pem}" -outform DER -out "${der}"
+    if mokutil --test-key "${der}" 2>/dev/null | grep -i 'already enrolled' >/dev/null; then
+        ok "Kestrel driver key is enrolled: signed drivers (xpad) load with Secure Boot on"
+        rm -f "${der}"
+        return 0
+    fi
+    if [[ "${state}" != *enabled* ]]; then
+        ok "Secure Boot is off, so drivers load without enrolling. Enrolling now keeps them working if you turn it on."
+    fi
+    echo
+    echo "  To let Kestrel's signed drivers load with Secure Boot on, enroll its key once:"
+    echo "    1. Choose a one-time password below (you type it again after rebooting)."
+    echo "    2. Reboot. A blue \"MOK management\" screen appears:"
+    echo "       ${bold}Enroll MOK -> Continue -> Yes -> type the password -> Reboot${reset}"
+    read -r -p "  Enroll now? [y/N] " answer
+    if [[ "${answer,,}" == y* ]]; then
+        sudo mokutil --import "${der}" && echo "  Done. Reboot to finish enrolling."
+    fi
+    rm -f "${der}"
+}
+
 case "${1:-help}" in
     status)       cmd_status ;;
     update)       shift; cmd_update "$@" ;;
@@ -147,6 +180,7 @@ case "${1:-help}" in
     bling)        shift; cmd_bling "$@" ;;
     controllers)  cmd_controllers ;;
     cowork)       cmd_cowork ;;
+    secureboot)   cmd_secureboot ;;
     help|-h|--help) cmd_help ;;
     *) echo "Unknown command: $1"; echo; cmd_help; exit 2 ;;
 esac

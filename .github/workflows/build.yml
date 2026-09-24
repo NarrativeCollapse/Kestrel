@@ -40,10 +40,19 @@ jobs:
         with:
           SIGNING_SECRET: ${{ secrets.SIGNING_SECRET }}
 
+  kmods:
+    name: Kernel modules
+    needs: set-env
+    uses: ./.github/workflows/build-kmods.yml
+    secrets: inherit
+    permissions:
+      contents: read
+      packages: write
+
   build-image:
     name: Build image
     uses: AlmaLinux/atomic-ci/.github/workflows/build-image.yml@v11
-    needs: set-env
+    needs: [set-env, kmods]
     with:
       image-description: "Kestrel: AlmaLinux Atomic KDE Plasma desktop tuned for gaming on Intel graphics"
       containerfile: Dockerfile
@@ -83,7 +92,8 @@ jobs:
 
           # Reported, not enforced: packages/modules this build had to skip.
           cat /usr/share/kestrel/missing-optional-packages 2>/dev/null || echo "no optional packages skipped"
-          find /usr/lib/modules -name 'xpad.ko*' -o -name 'hid-microsoft.ko*' | sed 's|.*/||'
+          find /usr/lib/modules \( -name 'xpad.ko*' -o -name 'hid-microsoft.ko*' \) -printf '%P\n'
+          for ko in /usr/lib/modules/*/extra/kestrel/*.ko; do [ -f "$ko" ] && echo "$ko signer: $(modinfo -F signer "$ko" || true)"; done
 
           cat /etc/os-release
           bootc -V

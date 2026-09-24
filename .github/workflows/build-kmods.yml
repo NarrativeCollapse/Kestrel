@@ -1,0 +1,44 @@
+---
+# Builds and signs Kestrel's out-of-tree kernel modules (xpad) for the current AlmaLinux 10
+# kernel and publishes ghcr.io/<owner>/kestrel-kmods:latest. "Build image" calls this first
+# so the modules always match the kernel in the image it's about to build.
+# Signing key: repository secret KMOD_SIGNING_KEY (see README, "Secure Boot").
+name: Build kernel modules
+on:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  kmods:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v4
+
+      - name: Build modules
+        env:
+          KMOD_SIGNING_KEY: ${{ secrets.KMOD_SIGNING_KEY }}
+        run: |
+          umask 077
+          printf '%s' "${KMOD_SIGNING_KEY}" > "${RUNNER_TEMP}/kmod_key"
+          podman build \
+            --secret id=kmod_key,src="${RUNNER_TEMP}/kmod_key" \
+            -f kmods/Containerfile \
+            -t kestrel-kmods:latest \
+            .
+          rm -f "${RUNNER_TEMP}/kmod_key"
+
+      - name: Push to ghcr.io
+        if: github.event_name != 'pull_request'
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ACTOR: ${{ github.actor }}
+          OWNER: ${{ github.repository_owner }}
+        run: |
+          IMAGE="ghcr.io/${OWNER,,}/kestrel-kmods:latest"
+          echo "${TOKEN}" | podman login ghcr.io -u "${ACTOR}" --password-stdin
+          podman push kestrel-kmods:latest "${IMAGE}"

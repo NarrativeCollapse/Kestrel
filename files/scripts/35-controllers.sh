@@ -2,9 +2,11 @@
 # Xbox controllers (and other pads) with in-kernel drivers:
 #   USB:       xpad          (Xbox 360 / One / Series, wired)
 #   Bluetooth: hid-microsoft (Xbox One S / Series with Bluetooth firmware)
+# EL10's kernel doesn't build xpad, so Kestrel builds it out of tree and signs it with the
+# Kestrel module key (.github/workflows/build-kmods.yml -> /ctx/kmods/<kernel>/xpad.ko).
+# With Secure Boot on, enroll the key once: `kestrel secureboot`.
 # Permissions for Flatpak apps come from 70-kestrel-game-controllers.rules (Microsoft 045e).
-# Not covered: the Xbox Wireless Adapter USB dongle needs the out-of-tree xone driver plus
-# Microsoft firmware, and unsigned modules don't load with Secure Boot on. See README.
+# Not covered: the Xbox Wireless Adapter USB dongle (xone driver + Microsoft firmware).
 
 set -xeuo pipefail
 source "$(dirname "$0")/lib.sh"
@@ -18,6 +20,20 @@ has_module() { find "/usr/lib/modules/${KVER}" -name "$1.ko*" -print -quit | gre
 if ! has_module xpad || ! has_module hid-microsoft; then
     install_optional "kernel-modules-extra-${KVR}"
 fi
+# xpad from Kestrel's kmods build, when it was built for this exact kernel.
+if ! has_module xpad; then
+    if [[ -f "/ctx/kmods/${KVER}/xpad.ko" ]]; then
+        install -D -m 0644 "/ctx/kmods/${KVER}/xpad.ko" "/usr/lib/modules/${KVER}/extra/kestrel/xpad.ko"
+        if [[ -f "/ctx/kmods/${KVER}/SIGNED" ]]; then
+            echo "xpad: installed, signed with the Kestrel module key"
+        else
+            echo "::warning::xpad installed unsigned (no KMOD_SIGNING_KEY); it only loads with Secure Boot off"
+        fi
+    else
+        echo "::warning::No Kestrel xpad build for ${KVER}; kmods were built for: $(ls /ctx/kmods 2>/dev/null | tr '\n' ' ')"
+    fi
+fi
+
 for mod in xpad hid-microsoft; do
     if has_module "${mod}"; then
         echo "${mod}: present for ${KVER}"
@@ -28,6 +44,9 @@ for mod in xpad hid-microsoft; do
     fi
 done
 depmod -a "${KVER}"
+
+# mokutil + openssl: `kestrel secureboot` enrolls the Kestrel driver key.
+install_optional mokutil openssl
 
 # Bluetooth for wireless pads
 dnf install -y bluez

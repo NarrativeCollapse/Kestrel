@@ -1,0 +1,6 @@
+xpad.c: Linux kernel v6.12, drivers/input/joystick/xpad.c (unmodified)
+  upstream commit adc218676eef25575469234709c2d87185ca223a (tag v6.12)
+  sha256 44a90b0c8e4e5a054d0f463bf251c478b50ad811a77e2aef307c2738caf6852f
+  License: GPL-2.0-or-later (see SPDX header)
+AlmaLinux 10's kernel is 6.12-based but doesn't build xpad (CONFIG_JOYSTICK_XPAD is off),
+so Kestrel builds it out of tree and signs it with the Kestrel module key.
